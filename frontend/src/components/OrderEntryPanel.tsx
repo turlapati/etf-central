@@ -1,5 +1,6 @@
 import { useState, useRef, useCallback, useEffect } from "react";
 import { TICKERS, METHODS, BASKET_TYPES } from "../lib/constants";
+import { useClock } from "../hooks/useClock";
 
 interface Props {
   onSubmit: (order: OrderFormData) => void;
@@ -155,6 +156,12 @@ function getSuggestions(input: string, parsed: ParsedFields): Suggestion[] {
 
 /* ── Component ── */
 
+const SETTLEMENT_PERIODS = ["T+1", "T+2", "T+3"];
+const SETTLEMENT_METHODS = ["DVP", "RVP", "FOP"];
+const TRANSFER_AGENTS = ["BNY Mellon", "State Street", "Computershare"];
+const CLEARING_SETTLEMENTS = ["NSCC", "DTC", "Euroclear"];
+const BOOK_ENTRIES = ["DTC", "Physical", "Fed Book-Entry"];
+
 export default function OrderEntryPanel({ onSubmit, isSubmitting }: Props) {
   const [action, setAction] = useState<"CREATE" | "REDEEM">("CREATE");
   const [ticker, setTicker] = useState("IWM");
@@ -162,6 +169,12 @@ export default function OrderEntryPanel({ onSubmit, isSubmitting }: Props) {
   const [unitSize, setUnitSize] = useState("50000");
   const [method, setMethod] = useState("Cash");
   const [basketType, setBasketType] = useState("Standard");
+  const [settlementPeriod, setSettlementPeriod] = useState("T+1");
+  const [settlementMethod, setSettlementMethod] = useState("DVP");
+  const [transferAgent, setTransferAgent] = useState("BNY Mellon");
+  const [clearingSettlement, setClearingSettlement] = useState("NSCC");
+  const [bookEntry, setBookEntry] = useState("DTC");
+  const { time12: stageTime } = useClock();
 
   const [cmdInput, setCmdInput] = useState("");
   const [cmdFocused, setCmdFocused] = useState(false);
@@ -246,198 +259,280 @@ export default function OrderEntryPanel({ onSubmit, isSubmitting }: Props) {
       : "";
 
   return (
-    <aside className="w-64 flex flex-col gap-2 bg-surface-panel glass rounded-lg border border-border-subtle p-3 overflow-y-auto no-scrollbar shrink-0">
-      <div className="flex justify-between items-center mb-1">
-        <h2 className="font-bold text-xs uppercase tracking-tight text-text-dim">New Order</h2>
-        <span className="text-[11px] text-accent-green font-bold">LIVE</span>
-      </div>
+    <aside className="w-72 flex flex-col bg-surface-panel glass rounded-lg border border-border-subtle shrink-0 overflow-hidden">
+      {/* Scrollable form area */}
+      <div className="flex-1 overflow-y-auto thin-scrollbar p-3 flex flex-col gap-1.5">
+        <h2 className="font-extrabold text-xs uppercase tracking-tight text-white mb-0.5">New Order</h2>
 
-      {/* ── Command Bar ── */}
-      <div className="relative">
-        <div className="flex items-center bg-surface-input border border-border-subtle rounded-md px-2 py-1.5 gap-1.5 focus-within:border-accent-blue/50 transition-colors">
-          <span className="text-accent-blue text-xs font-bold select-none">&gt;</span>
-          <input
-            ref={inputRef}
-            type="text"
-            value={cmdInput}
-            onChange={(e) => { setCmdInput(e.target.value); setSelectedIdx(-1); }}
-            onFocus={() => setCmdFocused(true)}
-            onBlur={() => setTimeout(() => setCmdFocused(false), 150)}
-            onKeyDown={handleKeyDown}
-            placeholder={hint}
-            className="bg-transparent flex-1 text-xs text-white outline-none placeholder:text-text-dim/50"
-            spellCheck={false}
-            autoComplete="off"
-          />
-        </div>
-        {cmdInput.trim() && (
-          <div className="flex flex-wrap gap-1 mt-1">
-            {parsed.action && (
-              <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${parsed.action === "CREATE" ? "bg-accent-green/15 text-accent-green" : "bg-accent-red/15 text-accent-red"}`}>
-                {parsed.action}
-              </span>
-            )}
-            {parsed.ticker && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent-blue/15 text-accent-blue font-bold">{parsed.ticker}</span>
-            )}
-            {parsed.units !== undefined && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.units}u</span>
-            )}
-            {parsed.unit_size !== undefined && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.unit_size.toLocaleString()}/u</span>
-            )}
-            {parsed.method && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.method}</span>
-            )}
-            {parsed.basket_type && (
-              <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.basket_type}</span>
-            )}
+        {/* ── Command Bar ── */}
+        <div className="relative">
+          <div className="flex items-center bg-surface-input border border-border-subtle rounded-md px-2 py-1 gap-1.5 focus-within:border-accent-blue/50 transition-colors">
+            <span className="text-accent-blue text-xs font-bold select-none">&gt;</span>
+            <input
+              ref={inputRef}
+              type="text"
+              value={cmdInput}
+              onChange={(e) => { setCmdInput(e.target.value); setSelectedIdx(-1); }}
+              onFocus={() => setCmdFocused(true)}
+              onBlur={() => setTimeout(() => setCmdFocused(false), 150)}
+              onKeyDown={handleKeyDown}
+              placeholder={hint}
+              className="bg-transparent flex-1 text-xs text-white outline-none placeholder:text-text-dim/50"
+              spellCheck={false}
+              autoComplete="off"
+            />
           </div>
-        )}
+          {cmdInput.trim() && (
+            <div className="flex flex-wrap gap-1 mt-1">
+              {parsed.action && (
+                <span className={`text-[9px] px-1.5 py-0.5 rounded font-bold ${parsed.action === "CREATE" ? "bg-accent-green/15 text-accent-green" : "bg-accent-red/15 text-accent-red"}`}>
+                  {parsed.action}
+                </span>
+              )}
+              {parsed.ticker && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-accent-blue/15 text-accent-blue font-bold">{parsed.ticker}</span>
+              )}
+              {parsed.units !== undefined && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.units}u</span>
+              )}
+              {parsed.unit_size !== undefined && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.unit_size.toLocaleString()}/u</span>
+              )}
+              {parsed.method && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.method}</span>
+              )}
+              {parsed.basket_type && (
+                <span className="text-[9px] px-1.5 py-0.5 rounded bg-white/5 text-white/70 font-medium">{parsed.basket_type}</span>
+              )}
+            </div>
+          )}
 
-        {/* Suggestions dropdown */}
-        {cmdFocused && suggestions.length > 0 && (
-          <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1a222c] border border-border-subtle rounded-md shadow-xl overflow-hidden">
-            {suggestions.map((s, i) => (
-              <button
-                key={`${s.category}-${s.label}`}
-                onMouseDown={(e) => { e.preventDefault(); applySuggestion(s); }}
-                className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs transition-colors ${
-                  i === selectedIdx
-                    ? "bg-accent-blue/15 text-white"
-                    : "text-white/80 hover:bg-white/5"
-                }`}
+          {/* Suggestions dropdown */}
+          {cmdFocused && suggestions.length > 0 && (
+            <div className="absolute z-50 left-0 right-0 top-full mt-1 bg-[#1a222c] border border-border-subtle rounded-md shadow-xl overflow-hidden">
+              {suggestions.map((s, i) => (
+                <button
+                  key={`${s.category}-${s.label}`}
+                  onMouseDown={(e) => { e.preventDefault(); applySuggestion(s); }}
+                  className={`w-full flex items-center justify-between px-2.5 py-1.5 text-xs transition-colors ${
+                    i === selectedIdx
+                      ? "bg-accent-blue/15 text-white"
+                      : "text-white/80 hover:bg-white/5"
+                  }`}
+                >
+                  <span className="font-medium">{s.label}</span>
+                  <span className="text-[9px] text-text-dim">{s.category}</span>
+                </button>
+              ))}
+              <div className="px-2.5 py-1 border-t border-border-subtle">
+                <span className="text-[9px] text-text-dim">Tab to complete &middot; Enter to submit &middot; Esc to clear</span>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* ── Traditional Form ── */}
+        <div className="flex gap-1.5">
+          <button
+            onClick={() => setAction("CREATE")}
+            className={`flex-1 py-1.5 rounded font-bold text-xs border transition-all ${highlightRing("action")} ${
+              action === "CREATE"
+                ? "bg-accent-green/15 text-accent-green border-accent-green/30"
+                : "bg-surface-input text-text-dim border-border-subtle hover:bg-surface-input/80"
+            }`}
+          >
+            Create
+          </button>
+          <button
+            onClick={() => setAction("REDEEM")}
+            className={`flex-1 py-1.5 rounded font-bold text-xs border transition-all ${highlightRing("action")} ${
+              action === "REDEEM"
+                ? "bg-accent-red/15 text-accent-red border-accent-red/30"
+                : "bg-surface-input text-text-dim border-border-subtle hover:bg-surface-input/80"
+            }`}
+          >
+            Redeem
+          </button>
+        </div>
+
+        <div className="space-y-2">
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">ETF Ticker</label>
+              <select
+                value={ticker}
+                onChange={(e) => setTicker(e.target.value)}
+                className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("ticker")}`}
               >
-                <span className="font-medium">{s.label}</span>
-                <span className="text-[9px] text-text-dim">{s.category}</span>
-              </button>
-            ))}
-            <div className="px-2.5 py-1 border-t border-border-subtle">
-              <span className="text-[9px] text-text-dim">Tab to complete &middot; Enter to submit &middot; Esc to clear</span>
+                {TICKERS.map((t) => (
+                  <option key={t}>{t}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Units</label>
+              <input
+                className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("units")}`}
+                type="text"
+                value={units}
+                onChange={(e) => setUnits(e.target.value)}
+              />
             </div>
           </div>
-        )}
-      </div>
 
-      {/* ── Traditional Form ── */}
-      <div className="flex gap-1.5">
-        <button
-          onClick={() => setAction("CREATE")}
-          className={`flex-1 py-1.5 rounded font-bold text-xs border transition-all ${highlightRing("action")} ${
-            action === "CREATE"
-              ? "bg-accent-green/15 text-accent-green border-accent-green/30"
-              : "bg-surface-input text-text-dim border-border-subtle hover:bg-surface-input/80"
-          }`}
-        >
-          CREATE
-        </button>
-        <button
-          onClick={() => setAction("REDEEM")}
-          className={`flex-1 py-1.5 rounded font-bold text-xs border transition-all ${highlightRing("action")} ${
-            action === "REDEEM"
-              ? "bg-accent-red/15 text-accent-red border-accent-red/30"
-              : "bg-surface-input text-text-dim border-border-subtle hover:bg-surface-input/80"
-          }`}
-        >
-          REDEEM
-        </button>
-      </div>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Unit Size</label>
+              <input
+                className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("unit_size")}`}
+                type="text"
+                value={unitSize}
+                onChange={(e) => setUnitSize(e.target.value)}
+              />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Shares</label>
+              <input
+                className="bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none"
+                type="text"
+                value={shares.toLocaleString()}
+                readOnly
+              />
+            </div>
+          </div>
 
-      <div className="space-y-2 mt-1">
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold text-text-dim uppercase">ETF Ticker</label>
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Method</label>
+              <select
+                value={method}
+                onChange={(e) => setMethod(e.target.value)}
+                className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("method")}`}
+              >
+                <option value="Cash">Cash</option>
+                <option value="In-Kind" disabled className="text-text-dim">In-Kind</option>
+                <option value="Hybrid" disabled className="text-text-dim">Hybrid</option>
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Basket Type</label>
+              <select
+                value={basketType}
+                onChange={(e) => setBasketType(e.target.value)}
+                className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("basket_type")}`}
+              >
+                {BASKET_TYPES.map((b) => (
+                  <option key={b}>{b}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Stage Time</label>
+              <input
+                className="bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none"
+                type="text"
+                value={stageTime}
+                readOnly
+              />
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Total Value</label>
+              <input
+                className="bg-surface-input border border-border-subtle rounded px-1.5 text-[11px] text-accent-blue font-bold outline-none"
+                readOnly
+                type="text"
+                value={`$${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                title={`$${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
+              />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Transfer Agent</label>
+              <select
+                value={transferAgent}
+                onChange={(e) => setTransferAgent(e.target.value)}
+                className="bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none"
+              >
+                {TRANSFER_AGENTS.map((a) => (
+                  <option key={a}>{a}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Clearing Settlement</label>
+              <select
+                value={clearingSettlement}
+                onChange={(e) => setClearingSettlement(e.target.value)}
+                className="bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none"
+              >
+                {CLEARING_SETTLEMENTS.map((c) => (
+                  <option key={c}>{c}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-1.5">
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Settlement Period</label>
+              <select
+                value={settlementPeriod}
+                onChange={(e) => setSettlementPeriod(e.target.value)}
+                className="bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none"
+              >
+                {SETTLEMENT_PERIODS.map((p) => (
+                  <option key={p}>{p}</option>
+                ))}
+              </select>
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <label className="text-[10px] font-extrabold text-white uppercase">Settlement Method</label>
+              <select
+                value={settlementMethod}
+                onChange={(e) => setSettlementMethod(e.target.value)}
+                className="bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none"
+              >
+                {SETTLEMENT_METHODS.map((m) => (
+                  <option key={m}>{m}</option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          <div className="flex flex-col gap-0.5">
+            <label className="text-[10px] font-extrabold text-white uppercase">Book Entry</label>
             <select
-              value={ticker}
-              onChange={(e) => setTicker(e.target.value)}
-              className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none appearance-none ${highlightRing("ticker")}`}
-            >
-              {TICKERS.map((t) => (
-                <option key={t}>{t}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold text-text-dim uppercase">Units</label>
-            <input
-              className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("units")}`}
-              type="text"
-              value={units}
-              onChange={(e) => setUnits(e.target.value)}
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold text-text-dim uppercase">Unit Size</label>
-            <input
-              className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("unit_size")}`}
-              type="text"
-              value={unitSize}
-              onChange={(e) => setUnitSize(e.target.value)}
-            />
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold text-text-dim uppercase">Shares</label>
-            <input
+              value={bookEntry}
+              onChange={(e) => setBookEntry(e.target.value)}
               className="bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none"
-              type="text"
-              value={shares.toLocaleString()}
-              readOnly
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-2 gap-2">
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold text-text-dim uppercase">Method</label>
-            <select
-              value={method}
-              onChange={(e) => setMethod(e.target.value)}
-              className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("method")}`}
             >
-              {METHODS.map((m) => (
-                <option key={m}>{m}</option>
-              ))}
-            </select>
-          </div>
-          <div className="flex flex-col gap-1">
-            <label className="text-[11px] font-bold text-text-dim uppercase">Basket Type</label>
-            <select
-              value={basketType}
-              onChange={(e) => setBasketType(e.target.value)}
-              className={`bg-surface-input border border-border-subtle rounded px-2 text-xs outline-none ${highlightRing("basket_type")}`}
-            >
-              {BASKET_TYPES.map((b) => (
+              {BOOK_ENTRIES.map((b) => (
                 <option key={b}>{b}</option>
               ))}
             </select>
           </div>
         </div>
-
-        <div className="flex flex-col gap-1">
-          <label className="text-[11px] font-bold text-text-dim uppercase">Total Value</label>
-          <input
-            className="bg-surface-input border border-border-subtle rounded px-2 text-xs text-accent-blue font-bold outline-none"
-            readOnly
-            type="text"
-            value={`$${totalValue.toLocaleString("en-US", { minimumFractionDigits: 2 })}`}
-          />
-        </div>
       </div>
 
-      <button
-        onClick={handleSubmit}
-        disabled={isSubmitting}
-        className={`mt-auto font-extrabold py-2.5 rounded shadow-lg hover:brightness-110 active:scale-[0.98] transition-all text-xs uppercase tracking-wider ${
-          action === "CREATE"
-            ? "bg-accent-green text-bg-main shadow-accent-green/10"
-            : "bg-accent-red text-white shadow-accent-red/10"
-        } disabled:opacity-50`}
-      >
-        {isSubmitting ? "SUBMITTING..." : "SUBMIT ORDER"}
-      </button>
+      {/* Pinned submit button */}
+      <div className="p-3 pt-2 shrink-0">
+        <button
+          onClick={handleSubmit}
+          disabled={isSubmitting}
+          className={`w-full font-extrabold py-2.5 rounded shadow-lg hover:brightness-110 active:scale-[0.98] transition-all text-xs tracking-wider ${
+            action === "CREATE"
+              ? "bg-accent-green text-bg-main shadow-accent-green/10"
+              : "bg-accent-red text-white shadow-accent-red/10"
+          } disabled:opacity-50`}
+        >
+          {isSubmitting ? "SUBMITTING..." : `Submit ${action === "CREATE" ? "Create" : "Redeem"} Order`}
+        </button>
+      </div>
     </aside>
   );
 }

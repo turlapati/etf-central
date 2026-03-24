@@ -22,6 +22,13 @@ export function formatTime(dateStr: string): string {
   return d.toLocaleTimeString("en-US", { hour12: false });
 }
 
+export function formatDateTime(dateStr: string): string {
+  const d = new Date(dateStr);
+  const date = d.toLocaleDateString("en-CA"); // YYYY-MM-DD
+  const time = d.toLocaleTimeString("en-US", { hour12: false });
+  return `${date} ${time}`;
+}
+
 export function formatPct(value: number): string {
   const sign = value >= 0 ? "+" : "";
   return `${sign}${value.toFixed(2)}%`;

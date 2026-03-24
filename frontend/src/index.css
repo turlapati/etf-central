@@ -9,7 +9,7 @@
   --color-accent-blue: #42a5f5;
   --color-text-primary: #f0f2f5;
   --color-text-dim: #6b7a8d;
-  --color-border-subtle: rgba(255, 255, 255, 0.08);
+  --color-border-subtle: rgba(255, 255, 255, 0.20);
   --font-size-xxs: 0.6875rem;
   --font-size-tight: 0.75rem;
 }

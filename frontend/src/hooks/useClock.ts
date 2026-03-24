@@ -9,11 +9,12 @@ export function useClock() {
   }, []);
 
   const time = now.toLocaleTimeString("en-US", { hour12: false });
+  const time12 = now.toLocaleTimeString("en-US", { hour12: true });
   const date = now.toLocaleDateString("en-US", {
     year: "numeric",
     month: "2-digit",
     day: "2-digit",
   }) + " " + time + " EST";
 
-  return { time, date };
+  return { time, time12, date };
 }

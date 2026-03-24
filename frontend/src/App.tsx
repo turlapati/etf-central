@@ -44,7 +44,7 @@ export default function App() {
 
       <div className="flex-1 flex flex-col overflow-hidden p-1.5 gap-1.5">
         {/* Top: Sidebar + Charts/Blotter */}
-        <div className="flex gap-1.5 h-1/2">
+        <div className="flex gap-1.5 flex-[3] min-h-0">
           <OrderEntryPanel
             onSubmit={(data) => createOrder.mutate(data)}
             isSubmitting={createOrder.isPending}

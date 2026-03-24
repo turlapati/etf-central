@@ -1,5 +1,6 @@
 import StatusBadge from "./StatusBadge";
 import { formatCurrency, formatDateTime } from "../lib/formatters";
+import { STATE_DISPLAY } from "../lib/constants";
 import type { InstanceResponse } from "../api/types";
 
 interface Props {
@@ -14,11 +15,26 @@ export default function OrderBlotter({ orders, searchQuery, onSelectOrder, selec
     if (!searchQuery) return true;
     const q = searchQuery.toLowerCase();
     const ctx = o.context || {};
+    const units = ctx.units || 0;
+    const unitSize = ctx.unit_size || 50000;
+    const shares = units * unitSize;
+    const methodVal = ctx.method || "Cash";
+    const basketVal = ctx.basket_type || "Standard";
+    const settlement = methodVal === "In-Kind" ? "T+1 / IK" : "T+1 / DVP";
+    const actionLabel = (ctx.action || "CREATE") === "CREATE" ? "create" : "redeem";
+    const displayLabel = (STATE_DISPLAY[o.current_state]?.label || o.current_state).toLowerCase();
     return (
       String(o.id).includes(q) ||
+      actionLabel.includes(q) ||
       (ctx.ticker || "").toLowerCase().includes(q) ||
-      (ctx.action || "").toLowerCase().includes(q) ||
-      o.current_state.toLowerCase().includes(q)
+      String(units).includes(q) ||
+      shares.toLocaleString().toLowerCase().includes(q) ||
+      methodVal.toLowerCase().includes(q) ||
+      basketVal.toLowerCase().includes(q) ||
+      settlement.toLowerCase().includes(q) ||
+      o.current_state.toLowerCase().includes(q) ||
+      displayLabel.includes(q) ||
+      (o.created_at || "").toLowerCase().includes(q)
     );
   });
 
@@ -69,8 +85,8 @@ export default function OrderBlotter({ orders, searchQuery, onSelectOrder, selec
                 <tr
                   key={order.id}
                   onClick={() => onSelectOrder(order)}
-                  className={`hover:bg-white/[0.04] transition-colors cursor-pointer ${
-                    selectedOrderId === order.id ? "bg-accent-blue/[0.06]" : ""
+                  className={`hover:bg-white/[0.06] transition-colors cursor-pointer ${
+                    selectedOrderId === order.id ? "bg-accent-blue/[0.15] border-l-2 border-l-accent-blue" : ""
                   }`}
                 >
                   <td className="px-3 py-1">#{order.id}</td>

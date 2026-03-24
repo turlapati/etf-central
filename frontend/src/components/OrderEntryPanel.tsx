@@ -35,6 +35,32 @@ const BASKET_ALIASES: Record<string, string> = {
   custom: "Custom", cust: "Custom", cus: "Custom",
 };
 
+const SETTLEMENT_PERIOD_ALIASES: Record<string, string> = {
+  "t+1": "T+1", "t1": "T+1",
+  "t+2": "T+2", "t2": "T+2",
+  "t+3": "T+3", "t3": "T+3",
+};
+
+const SETTLEMENT_METHOD_ALIASES: Record<string, string> = {
+  dvp: "DVP", rvp: "RVP", fop: "FOP",
+};
+
+const TRANSFER_AGENT_ALIASES: Record<string, string> = {
+  bny: "BNY Mellon", mellon: "BNY Mellon", "bny-mellon": "BNY Mellon",
+  "state-street": "State Street", ss: "State Street",
+  computershare: "Computershare", comp: "Computershare",
+};
+
+const CLEARING_ALIASES: Record<string, string> = {
+  nscc: "NSCC", dtc: "DTC", euroclear: "Euroclear", euro: "Euroclear",
+};
+
+const BOOK_ENTRY_ALIASES: Record<string, string> = {
+  "book-entry": "DTC", "book": "DTC", "be": "DTC",
+  physical: "Physical", phys: "Physical",
+  "fed": "Fed Book-Entry", "fed-book": "Fed Book-Entry",
+};
+
 function parseUnitSize(token: string): number | null {
   const cleaned = token.replace(/,/g, "").toLowerCase();
   const match = cleaned.match(/^(\d+(?:\.\d+)?)(k|m)?$/);
@@ -53,6 +79,11 @@ interface ParsedFields {
   unit_size?: number;
   method?: string;
   basket_type?: string;
+  settlement_period?: string;
+  settlement_method?: string;
+  transfer_agent?: string;
+  clearing_settlement?: string;
+  book_entry?: string;
 }
 
 function parseCommand(input: string): ParsedFields {
@@ -71,6 +102,16 @@ function parseCommand(input: string): ParsedFields {
       result.method = METHOD_ALIASES[t];
     } else if (!result.basket_type && BASKET_ALIASES[t]) {
       result.basket_type = BASKET_ALIASES[t];
+    } else if (!result.settlement_period && SETTLEMENT_PERIOD_ALIASES[t]) {
+      result.settlement_period = SETTLEMENT_PERIOD_ALIASES[t];
+    } else if (!result.settlement_method && SETTLEMENT_METHOD_ALIASES[t]) {
+      result.settlement_method = SETTLEMENT_METHOD_ALIASES[t];
+    } else if (!result.transfer_agent && TRANSFER_AGENT_ALIASES[t]) {
+      result.transfer_agent = TRANSFER_AGENT_ALIASES[t];
+    } else if (!result.clearing_settlement && CLEARING_ALIASES[t]) {
+      result.clearing_settlement = CLEARING_ALIASES[t];
+    } else if (!result.book_entry && BOOK_ENTRY_ALIASES[t]) {
+      result.book_entry = BOOK_ENTRY_ALIASES[t];
     } else {
       unmatched.push(raw);
     }
@@ -165,7 +206,7 @@ const BOOK_ENTRIES = ["DTC", "Physical", "Fed Book-Entry"];
 export default function OrderEntryPanel({ onSubmit, isSubmitting }: Props) {
   const [action, setAction] = useState<"CREATE" | "REDEEM">("CREATE");
   const [ticker, setTicker] = useState("IWM");
-  const [units, setUnits] = useState("1000");
+  const [units, setUnits] = useState("2");
   const [unitSize, setUnitSize] = useState("50000");
   const [method, setMethod] = useState("Cash");
   const [basketType, setBasketType] = useState("Standard");
@@ -194,7 +235,13 @@ export default function OrderEntryPanel({ onSubmit, isSubmitting }: Props) {
     if (parsed.unit_size !== undefined) setUnitSize(String(parsed.unit_size));
     if (parsed.method) setMethod(parsed.method);
     if (parsed.basket_type) setBasketType(parsed.basket_type);
-  }, [cmdInput, parsed.action, parsed.ticker, parsed.units, parsed.unit_size, parsed.method, parsed.basket_type]);
+    if (parsed.settlement_period) setSettlementPeriod(parsed.settlement_period);
+    if (parsed.settlement_method) setSettlementMethod(parsed.settlement_method);
+    if (parsed.transfer_agent) setTransferAgent(parsed.transfer_agent);
+    if (parsed.clearing_settlement) setClearingSettlement(parsed.clearing_settlement);
+    if (parsed.book_entry) setBookEntry(parsed.book_entry);
+  }, [cmdInput, parsed.action, parsed.ticker, parsed.units, parsed.unit_size, parsed.method, parsed.basket_type,
+      parsed.settlement_period, parsed.settlement_method, parsed.transfer_agent, parsed.clearing_settlement, parsed.book_entry]);
 
   const shares = (parseInt(units.replace(/,/g, "")) || 0) * (parseInt(unitSize.replace(/,/g, "")) || 0);
   const totalValue = shares * 210.34;

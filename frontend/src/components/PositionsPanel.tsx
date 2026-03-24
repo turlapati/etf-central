@@ -5,6 +5,7 @@ import { formatCurrency, formatPnl, formatPct, formatNumber } from "../lib/forma
 export default function PositionsPanel() {
   const [filter, setFilter] = useState<"All" | "L" | "S">("All");
   const [search, setSearch] = useState("");
+  const [selectedTicker, setSelectedTicker] = useState<string | null>(null);
 
   const filtered = mockPositions.filter((p) => {
     if (filter === "L" && p.side !== "Long") return false;
@@ -106,7 +107,13 @@ export default function PositionsPanel() {
           </thead>
           <tbody className="divide-y divide-border-subtle/10">
             {filtered.map((p) => (
-              <tr key={p.ticker} className="hover:bg-white/[0.04] transition-colors whitespace-nowrap">
+              <tr
+                key={p.ticker}
+                onClick={() => setSelectedTicker(selectedTicker === p.ticker ? null : p.ticker)}
+                className={`hover:bg-white/[0.06] transition-colors whitespace-nowrap cursor-pointer ${
+                  selectedTicker === p.ticker ? "bg-accent-blue/[0.15] border-l-2 border-l-accent-blue" : ""
+                }`}
+              >
                 <td className="px-2 py-1 font-bold">{p.ticker}</td>
                 <td className="px-2 py-1">
                   <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full inline-block ${

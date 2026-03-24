@@ -24,7 +24,12 @@ etf-central/
 - Node.js 18+
 - npm
 
-### One-command startup
+### Platform Support
+
+- **macOS / Linux** — fully supported, including shell scripts
+- **Windows** — use the manual startup steps below. The shell scripts under `scripts/` require a bash-compatible environment (Git Bash, WSL, or similar)
+
+### One-command startup (macOS / Linux)
 
 ```bash
 bash scripts/start.sh
@@ -38,13 +43,24 @@ This will:
 ### Manual startup
 
 **Backend:**
+
 ```bash
 cd backend
-python -m venv .venv && source .venv/bin/activate
-pip install -e .
-cp .env.example .env
+python -m venv .venv
+```
+
+Activate the virtual environment:
+- macOS / Linux: `source .venv/bin/activate`
+- Windows (cmd): `.venv\Scripts\activate.bat`
+- Windows (PowerShell): `.venv\Scripts\Activate.ps1`
+
+```bash
+pip install -e .        # installs all dependencies from pyproject.toml
+cp .env.example .env    # Windows: copy .env.example .env
 python main.py
 ```
+
+> **Troubleshooting:** If you get `ModuleNotFoundError: No module named 'uvicorn'`, make sure you ran `pip install -e .` (with the dot) from the `backend/` directory, not just `pip install`. The dot tells pip to install this project and all its dependencies from `pyproject.toml`.
 
 The ETF order workflow auto-seeds on first startup. To re-seed manually:
 ```bash
@@ -55,6 +71,8 @@ bash scripts/seed-etf-workflow.sh
 ```bash
 bash scripts/etf-workflow-test.sh
 ```
+
+> **Note:** The seed and test scripts require bash. On Windows, run them via Git Bash or WSL.
 
 **Frontend:**
 ```bash

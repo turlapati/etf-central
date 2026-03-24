@@ -16,7 +16,7 @@ dist/
 *.db
 *.db-shm
 *.db-wal
-data/
+backend/data/
 
 # IDE
 .vscode/
